@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DaanVeda — Self Onboarding Portal</title>
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Inter,system-ui,sans-serif;font-size:14px;background:#f8fafc;color:#1e293b;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  button{font-family:inherit;cursor:pointer}
+  input{font-family:inherit}
+
+  /* ─ Header ─ */
+  #header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:white;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+  .logo{width:34px;height:34px;background:#3B82F6;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+  .logo-text{line-height:1}
+  .logo-text div:first-child{font-weight:700;font-size:14px}
+  .logo-text div:last-child{color:#93C5FD;font-size:10px}
+  #progress-wrap{text-align:right}
+  #progress-wrap .lbl{color:#93C5FD;font-size:10px;margin-bottom:3px}
+  .prog-row{display:flex;align-items:center;gap:8px}
+  .prog-bar-outer{width:110px;height:6px;background:#1e3a5f;border-radius:4px;overflow:hidden}
+  .prog-bar-inner{height:6px;background:#60A5FA;border-radius:4px;transition:width .35s}
+  #prog-pct{font-weight:700;font-size:14px}
+  #user-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);padding:6px 12px;border-radius:8px;color:white;font-size:12px;font-weight:500}
+  #user-btn .role-pill{background:#3B82F6;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+  #badge-count{background:#D97706;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;color:white;white-space:nowrap}
+
+  /* ─ Tabs ─ */
+  #tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;flex-shrink:0;overflow-x:auto}
+  .tab-btn{padding:11px 18px;font-size:12px;font-weight:500;color:#64748b;border:none;border-bottom:2px solid transparent;background:none;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all .15s}
+  .tab-btn.active{color:#3B82F6;font-weight:700;border-bottom-color:#3B82F6}
+  .mcq-score-pill{font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700;margin-left:3px}
+
+  /* ─ Body ─ */
+  #body{display:flex;flex:1;overflow:hidden}
+
+  /* ─ Sidebar ─ */
+  #sidebar{width:196px;background:white;border-right:1px solid #e2e8f0;overflow-y:auto;flex-shrink:0}
+  .sidebar-section{padding:10px 12px 4px;font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:.08em;text-transform:uppercase}
+  .day-item{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+  .day-item:hover{background:#f8fafc}
+  .day-item.active{border-left-color:#3B82F6;background:#EFF6FF}
+  .day-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border:1px solid #e2e8f0;transition:all .2s}
+  .day-meta{flex:1;min-width:0}
+  .day-meta .d-label{font-size:10px;font-weight:700;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day-meta .d-title{font-size:10px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day-mini-bar{margin-top:3px;height:3px;background:#e2e8f0;border-radius:4px;overflow:hidden;display:none}
+  .day-mini-fill{height:3px;background:#60A5FA;border-radius:4px}
+  .badge-dot{font-size:12px}
+
+  /* ─ Main content ─ */
+  #main{flex:1;overflow-y:auto;padding:20px}
+
+  /* ─ Cards ─ */
+  .card{background:white;border-radius:12px;border:1px solid #e2e8f0;padding:18px;margin-bottom:14px}
+  .card-sm{background:white;border-radius:10px;border:1px solid #e2e8f0;padding:14px;margin-bottom:10px}
+
+  /* ─ Day header ─ */
+  #day-header{border-radius:12px;border-width:1px;border-style:solid;padding:18px;margin-bottom:16px}
+  .dh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .dh-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  .dh-title{font-size:20px;font-weight:700;color:#0f172a;margin-bottom:3px}
+  .dh-subtitle{font-size:12px;color:#475569}
+  .dh-pct{font-size:30px;font-weight:800;line-height:1}
+  .dh-pct-lbl{font-size:10px;color:#64748b;margin-top:2px;text-align:right}
+  .dh-bar{margin-top:12px;height:6px;background:rgba(0,0,0,0.08);border-radius:4px;overflow:hidden}
+  .dh-bar-fill{height:6px;border-radius:4px;transition:width .3s}
+  .dh-tip{margin-top:12px;padding:9px 12px;background:rgba(255,255,255,0.7);border-radius:8px;font-size:11px;color:#334155;border-left-width:3px;border-left-style:solid}
+
+  /* ─ Two column layout ─ */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:700px){.two-col{grid-template-columns:1fr}}
+
+  /* ─ Tasks ─ */
+  .tasks-header{font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:13px}
+  .tasks-count{font-size:10px;background:#F1F5F9;color:#64748b;padding:2px 8px;border-radius:20px;font-weight:600}
+  .task-row{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .15s;user-select:none}
+  .task-row:hover{background:#f8fafc}
+  .task-row.done{background:#F0FDF4;border-color:#BBF7D0}
+  .task-circle{width:20px;height:20px;border-radius:50%;border:2px solid #CBD5E1;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;font-size:10px;font-weight:700;color:white}
+  .task-row.done .task-circle{background:#22C55E;border-color:#22C55E}
+  .task-text{font-size:12px;color:#334155;line-height:1.45}
+  .task-row.done .task-text{text-decoration:line-through;color:#94A3B8}
+  .cc-pill{margin-left:5px;font-size:9px;background:#FEF3C7;color:#92400E;padding:1px 5px;border-radius:10px;font-weight:600;text-decoration:none}
+
+  /* ─ KPIs ─ */
+  .kpi-row{padding:9px 11px;border-radius:8px;margin-bottom:7px;border:1px solid #E2E8F0;background:#F8FAFC}
+  .kpi-row.star-kpi{background:#FEFCE8;border-color:#FDE68A}
+  .kpi-top{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+  .kpi-label{font-weight:600;font-size:11px;color:#1e293b}
+  .kpi-desc{font-size:10px;color:#64748b}
+  .star-icon{font-size:12px}
+
+  /* ─ Resources in day ─ */
+  .res-mini{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;margin-bottom:3px;background:#F8FAFC}
+  .res-mini-icon{font-size:14px}
+  .res-mini-name{flex:1;font-size:11px;font-weight:500;color:#334155}
+  .res-mini-action{font-size:10px;color:#3B82F6;font-weight:500;flex-shrink:0}
+
+  /* ─ Badge card ─ */
+  .badge-card{padding:14px;border-radius:12px;display:flex;align-items:center;gap:12px;border:2px dashed #CBD5E1;background:#F8FAFC;transition:all .2s}
+  .badge-card.earned{border-style:solid}
+  .badge-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background:#E2E8F0;border:2px solid #CBD5E1;transition:all .2s}
+  .badge-info .badge-status{font-size:11px;font-weight:700;margin-bottom:2px}
+  .badge-info .badge-name{font-size:12px;font-weight:700;color:#1e293b}
+  .badge-info .badge-desc{font-size:10px;color:#94A3B8;margin-top:1px}
+
+  /* ─ MCQ prompt banner ─ */
+  .mcq-banner{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px}
+  .mcq-banner-left .t{font-weight:700;color:#1D4ED8;margin-bottom:3px;font-size:13px}
+  .mcq-banner-left .s{font-size:11px;color:#3B82F6}
+  .mcq-banner-left .r{font-size:12px;font-weight:700;margin-top:4px}
+  .btn-primary{padding:9px 18px;border-radius:8px;border:none;background:#3B82F6;color:white;font-weight:700;font-size:12px;white-space:nowrap}
+  .btn-secondary{padding:9px 18px;border-radius:8px;border:1px solid #e2e8f0;background:white;color:#334155;font-weight:600;font-size:12px}
+
+  /* ─ Resources Tab ─ */
+  .res-tab-title{font-size:20px;font-weight:700;margin-bottom:4px}
+  .res-tab-sub{color:#64748b;font-size:12px;margin-bottom:20px}
+  .res-cat-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:20px}
+  .res-cat-name{font-weight:700;font-size:13px}
+  .res-cat-count{font-size:10px;background:#EFF6FF;color:#2563EB;padding:2px 9px;border-radius:20px;font-weight:600}
+  .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  @media(max-width:600px){.res-grid{grid-template-columns:1fr}}
+  .res-card{background:white;border:1px solid #e2e8f0;border-radius:10px;padding:13px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:all .15s}
+  .res-card:hover{background:#f8fafc}
+  .res-card.accessed{background:#F0FDF4;border-color:#BBF7D0}
+  .res-check{width:22px;height:22px;border-radius:50%;border:2px solid #CBD5E1;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;font-weight:700;color:white;transition:all .15s}
+  .res-card.accessed .res-check{background:#22C55E;border-color:#22C55E}
+  .res-card-icon{font-size:15px}
+  .res-card-name{font-weight:600;font-size:12px;color:#1e293b;margin-bottom:3px}
+  .res-card.accessed .res-card-name{color:#15803D}
+  .res-card-desc{font-size:10px;color:#64748b;margin-bottom:4px;line-height:1.4}
+  .res-card-action{font-size:10px;color:#3B82F6;font-weight:600}
+
+  /* ─ Badges Tab ─ */
+  .badges-title{font-size:20px;font-weight:700;margin-bottom:4px}
+  .badges-sub{color:#64748b;font-size:12px;margin-bottom:20px}
+  .badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:600px){.badges-grid{grid-template-columns:repeat(2,1fr)}}
+  .badge-tile{border-radius:12px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;border:1px solid #e2e8f0;background:#f8fafc;transition:all .2s;opacity:.55}
+  .badge-tile.earned{opacity:1}
+  .badge-tile-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:#E2E8F0;border:2px solid #CBD5E1;transition:all .2s}
+  .badge-tile-name{font-size:11px;font-weight:700;color:#64748b}
+  .badge-tile.earned .badge-tile-name{color:inherit}
+  .badge-tile-desc{font-size:10px;color:#94A3B8;line-height:1.4}
+  .earned-pill{font-size:9px;background:white;color:#16A34A;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid #BBF7D0}
+  .manager-note{font-size:10px;color:#94A3B8;font-style:italic}
+
+  /* ─ MCQ Tab ─ */
+  .mcq-title{font-size:20px;font-weight:700;margin-bottom:4px}
+  .mcq-sub{color:#64748b;font-size:12px;margin-bottom:18px}
+  .mcq-result{border-radius:12px;padding:18px;margin-bottom:20px;display:flex;align-items:center;gap:18px}
+  .mcq-result-score{font-size:38px;font-weight:800;line-height:1}
+  .mcq-result-msg{font-weight:700;font-size:14px;margin-bottom:3px}
+  .mcq-result-detail{color:#64748b;font-size:12px}
+  .retry-btn{margin-top:7px;font-size:11px;color:#3B82F6;background:none;border:none;cursor:pointer;font-weight:700;padding:0;text-decoration:underline}
+  .q-card{background:white;border-radius:10px;border:1px solid #e2e8f0;padding:16px;margin-bottom:12px}
+  .q-num{width:24px;height:24px;border-radius:50%;background:#EFF6FF;color:#1D4ED8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .q-text{font-weight:600;font-size:12px;line-height:1.5;color:#1e293b}
+  .q-opts{padding-left:34px;margin-top:10px}
+  .opt-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;margin-bottom:5px;cursor:pointer;border:1px solid #E2E8F0;background:#F8FAFC;transition:all .1s;font-size:12px;color:#334155}
+  .opt-row:hover{background:#EFF6FF;border-color:#BFDBFE}
+  .opt-row.selected{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}
+  .opt-row.correct{background:#F0FDF4;border-color:#86EFAC;color:#15803D}
+  .opt-row.wrong{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+  .opt-circle{width:17px;height:17px;border-radius:50%;border:2px solid #CBD5E1;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;color:white;transition:all .15s}
+  .opt-row.selected .opt-circle{background:#3B82F6;border-color:#3B82F6}
+  .opt-row.correct .opt-circle{background:#22C55E;border-color:#22C55E}
+  .opt-row.wrong .opt-circle{background:#EF4444;border-color:#EF4444}
+  #submit-mcq{width:100%;padding:13px;border-radius:10px;background:#3B82F6;color:white;font-weight:700;font-size:13px;border:none;margin-top:4px;margin-bottom:24px;transition:background .15s}
+  #submit-mcq:hover{background:#2563EB}
+  #submit-mcq:disabled{background:#CBD5E1;cursor:not-allowed}
+
+  /* ─ Setup Modal ─ */
+  #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:999}
+  .modal-box{background:white;border-radius:16px;padding:28px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  .modal-title{font-size:20px;font-weight:700;margin-bottom:3px}
+  .modal-sub{color:#64748b;font-size:12px;margin-bottom:22px}
+  .modal-label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+  .modal-input{width:100%;padding:10px 13px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border .15s}
+  .modal-input:focus{border-color:#3B82F6}
+  .role-btns{display:flex;gap:7px;margin-bottom:24px}
+  .role-btn{flex:1;padding:9px 0;border-radius:8px;border:2px solid #e2e8f0;background:white;color:#475569;font-weight:600;font-size:12px;cursor:pointer;transition:all .15s}
+  .role-btn.active{border-color:#3B82F6;background:#EFF6FF;color:#1D4ED8}
+  #save-setup{width:100%;padding:11px;border-radius:8px;background:#3B82F6;color:white;font-weight:700;font-size:13px;border:none;transition:background .15s}
+  #save-setup:hover{background:#2563EB}
+  #save-setup:disabled{background:#CBD5E1;cursor:not-allowed}
+
+  /* ─ Scrollbar ─ */
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+  /* ─ Auth Modal ─ */
+  #auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .auth-box{background:white;border-radius:16px;padding:28px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  .auth-title{font-size:20px;font-weight:700;margin-bottom:3px}
+  .auth-sub{color:#64748b;font-size:12px;margin-bottom:22px}
+  .auth-label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+  .auth-input{width:100%;padding:10px 13px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border .15s;margin-bottom:16px}
+  .auth-input:focus{border-color:#3B82F6}
+  #auth-btn{width:100%;padding:11px;border-radius:8px;background:#3B82F6;color:white;font-weight:700;font-size:13px;border:none;cursor:pointer;transition:background .15s}
+  #auth-btn:hover:not(:disabled){background:#2563EB}
+  #auth-btn:disabled{background:#CBD5E1;cursor:not-allowed}
+  #auth-error{color:#DC2626;font-size:11px;margin-bottom:10px;display:none;padding:8px 10px;background:#FEF2F2;border-radius:6px;border:1px solid #FECACA}
+  #auth-status{text-align:center;font-size:11px;color:#94A3B8;margin-top:10px;min-height:16px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div style="display:flex;align-items:center;gap:11px">
+    <div class="logo">DV</div>
+    <div class="logo-text">
+      <div>DaanVeda</div>
+      <div>Self-Onboarding Portal</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+    <div id="progress-wrap">
+      <div class="lbl">Overall Progress</div>
+      <div class="prog-row">
+        <div class="prog-bar-outer"><div class="prog-bar-inner" id="prog-bar" style="width:0%"></div></div>
+        <span id="prog-pct">0%</span>
+      </div>
+    </div>
+    <button id="user-btn" onclick="openSetup()">
+      <span id="user-name-lbl">Set your name</span>
+      <span class="role-pill" id="user-role-lbl">SDR</span>
+    </button>
+    <div id="badge-count">🏅 0/9</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div id="tabs">
+  <button class="tab-btn active" onclick="switchTab('timeline')" id="tab-timeline">🗓️ Journey</button>
+  <button class="tab-btn" onclick="switchTab('resources')" id="tab-resources">📦 Resources</button>
+  <button class="tab-btn" onclick="switchTab('badges')" id="tab-badges">🏅 Badges</button>
+  <button class="tab-btn" onclick="switchTab('mcq')" id="tab-mcq">📝 Knowledge Test</button>
+</div>
+
+<!-- Body -->
+<div id="body">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-section">Your Journey</div>
+    <div id="sidebar-days"></div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="tab-timeline-content"></div>
+    <div id="tab-resources-content" style="display:none"></div>
+    <div id="tab-badges-content" style="display:none"></div>
+    <div id="tab-mcq-content" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Setup Modal (name + role) -->
+<div id="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Welcome to DaanVeda 🚀</div>
+    <div class="modal-sub">Let's personalise your onboarding journey.</div>
+    <label class="modal-label">Your Name</label>
+    <input id="name-input" class="modal-input" placeholder="e.g. Arjun Mehta" style="margin-bottom:16px" oninput="document.getElementById('save-setup').disabled=!this.value.trim()">
+    <label class="modal-label" style="margin-top:4px">Your Role</label>
+    <div class="role-btns">
+      <button class="role-btn active" onclick="selectRole('SDR',this)">SDR</button>
+      <button class="role-btn" onclick="selectRole('Closer',this)">Closer</button>
+      <button class="role-btn" onclick="selectRole('Cold Caller',this)">Cold Caller</button>
+    </div>
+    <button id="save-setup" disabled onclick="saveSetup()">Start My Onboarding →</button>
+  </div>
+</div>
+
+<!-- Auth Modal (email login) -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-title">Sign In to DaanVeda 🔐</div>
+    <div class="auth-sub">Enter your work email to access your onboarding portal.</div>
+    <label class="auth-label">Work Email</label>
+    <input id="auth-email" class="auth-input" type="email" placeholder="you@daanveda.com"
+      onkeydown="if(event.key==='Enter')handleAuth()">
+    <div id="auth-error"></div>
+    <button id="auth-btn" onclick="handleAuth()">Continue →</button>
+    <div id="auth-status"></div>
+  </div>
+</div>
+
+<script>
+// ─── SUPABASE INIT ────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = 'https://gjpkzxczwftazefqoddj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ZtF3cRJ8UPwZd9v3JwRbhg_L-UCEDYM';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const TYPE_META={
+  setup:{bg:"#EEF4FF",border:"#B8D0FB",text:"#2D5FA6",dot:"#4A7FD4"},
+  learn:{bg:"#F3EFFE",border:"#C9BAFC",text:"#5B36C8",dot:"#7B5CE5"},
+  shadow:{bg:"#FFF4EC",border:"#FDC89A",text:"#B85A10",dot:"#E8832A"},
+  practice:{bg:"#FFF0F3",border:"#FDB8C8",text:"#A02040",dot:"#D94060"},
+  plan:{bg:"#EDFAF5",border:"#9AE8CC",text:"#0E6E52",dot:"#1DA87A"},
+  data:{bg:"#EAF8FD",border:"#8DD9F0",text:"#0A6882",dot:"#1898C2"},
+  feedback:{bg:"#FEF8EC",border:"#FAD578",text:"#825808",dot:"#C98C10"},
+  rest:{bg:"#F5F5F5",border:"#DEDEDE",text:"#888888",dot:"#AAAAAA"},
+  execution:{bg:"#EDFAEC",border:"#9AE89A",text:"#1A6A19",dot:"#28A826"},
+};
+
+const DAYS=[
+  {id:0,label:"Day 0",title:"Onboarding Call & Setup",subtitle:"Get all tools, access, and introductions done",type:"setup",emoji:"🚀",
+   tasks:[
+     {id:"d0_1",text:"Attend the orientation onboarding call with the team"},
+     {id:"d0_2",text:"Get DV platform access and Unisheet access — know where to track your performance every day"},
+     {id:"d0_3",text:"Access the shared resource folder (Sales Bible, decks, templates)"},
+     {id:"d0_4",text:"Optimise LinkedIn profile — add DaanVeda role, connect with team"},
+     {id:"d0_5",text:"Introduce yourself in the team WhatsApp / Slack group"},
+     {id:"d0_6",text:"Review the full 15-day onboarding schedule with your manager"},
+   ],
+   kpis:[
+     {label:"All platform access active by EOD",star:true,desc:"DV platform, Unisheet, resource folder — fully set up"},
+     {label:"Intro message posted in team group",star:false,desc:"Brief, friendly intro — name, role, where you're from"},
+     {label:"15-day schedule confirmed with manager",star:false,desc:"Review, acknowledge, and agree on milestones"},
+   ],
+   resources:["email","crm","linkedin","schedule"],badgeId:"setup_hero",
+   tip:"First impressions matter. Be proactive — get everything set up before Day 1 starts."},
+
+  {id:1,label:"Day 1–2",title:"Master Fundraising",subtitle:"Sales Bible · Fundraising Course · Strategy Doc · Case Studies",type:"learn",emoji:"📚",
+   tasks:[
+     {id:"d1_1",text:"Read the Sales Bible"},
+     {id:"d1_2",text:"Go through the Fundraising Course briefly"},
+     {id:"d1_3",text:"Read the Strategy Doc"},
+     {id:"d1_4",text:"Read customer case studies that prove DaanVeda is a needed platform in the ecosystem"},
+     {id:"d1_5",text:"Explore successful fundraising campaigns done by different organisations across the globe to raise funds"},
+     {id:"d1_6",text:"Write down your top 10 personal takeaways in your own words and in your own way"},
+     {id:"d1_7",text:"Complete the MCQ Knowledge Test (≥80% to pass)"},
+   ],
+   kpis:[
+     {label:"MCQ score ≥ 80%",star:true,desc:"Non-negotiable — proves genuine understanding, not just reading"},
+     {label:"10 takeaways written in your own words",star:true,desc:"Share with manager — your own style, your own way"},
+     {label:"All course modules gone through",star:false,desc:"Marked done — not just opened"},
+   ],
+   resources:["sales_bible","fundraising_course","vertical_strategy","case_studies"],badgeId:"fundraising_scholar",
+   tip:"Read with a lens of 'how does this apply to a real prospect conversation?' — not just to remember, but to use.",mcqPrompt:true},
+
+  {id:2,label:"Day 3",title:"Know DaanVeda Inside Out",subtitle:"Product Deck · Irfan's Demo · Company Profile · Competitor Cards",type:"learn",emoji:"🧠",
+   tasks:[
+     {id:"d2_1",text:"Study the full DaanVeda product deck (every slide)"},
+     {id:"d2_2",text:"Watch Irfan's recorded demo end-to-end — take detailed notes"},
+     {id:"d2_3",text:"Read the DaanVeda company profile, mission, and client logos"},
+     {id:"d2_4",text:"Learn all modules: what they do, who they're for, key benefits"},
+     {id:"d2_5",text:"Understand pricing tiers and package differences"},
+     {id:"d2_6",text:"Study the top 3 competitor battle cards"},
+     {id:"d2_7",text:"Practise a 2-min 'What is DaanVeda?' elevator pitch out loud — record yourself"},
+   ],
+   kpis:[
+     {label:"Explain all modules without notes",star:true,desc:"Can describe every DaanVeda module — unprompted"},
+     {label:"2-min pitch recorded and sent to manager",star:true,desc:"Self-rated — share recording via WhatsApp or Drive"},
+     {label:"10 specific notes from Irfan's demo",star:false,desc:"Openers, pauses, objection moments, close attempt"},
+   ],
+   resources:["product_deck","demo_video_irfan","company_profile","competitor_cards"],badgeId:"product_pro",
+   tip:"Watch Irfan's demo twice — first time for the overall flow, second time specifically for how he handles objections."},
+
+  {id:3,label:"Day 4–5",title:"Shadow Calls",subtitle:"2 Onboarding Calls + 4 Sales Calls — absorb everything",type:"shadow",emoji:"👂",
+   tasks:[
+     {id:"d3_1",text:"Shadow 2 onboarding calls — stay fully present and listen actively"},
+     {id:"d3_2",text:"Shadow 4 sales calls with existing closers — observe the full flow"},
+     {id:"d3_3",text:"Make a document with your key learnings and least-sure areas from all 6 calls"},
+   ],
+   kpis:[
+     {label:"Learnings document submitted to manager",star:true,desc:"What clicked, what surprised you, what you're unsure about"},
+     {label:"Key patterns from top performers noted",star:true,desc:"What do good closers do that feels different?"},
+     {label:"Least-sure areas honestly listed",star:false,desc:"This is where your coaching starts — be honest"},
+   ],
+   resources:["call_templates","shadow_debrief_form","demo_tracker"],badgeId:"shadow_champion",
+   tip:"Stay muted. Your job is to absorb, not participate. The notes you take in these calls are your personal playbook."},
+
+  {id:4,label:"Day 6",title:"Deep Shadow + Deck Prep",subtitle:"Shadow 10–12 cold calls · Make your deck more comprehensive",type:"shadow",emoji:"🎧",
+   tasks:[
+     {id:"d4_1",text:"Shadow 10–12 cold calls across different team members"},
+     {id:"d4_2",text:"Note objections, opening lines, and how conversations are steered"},
+     {id:"d4_3",text:"Make your deck more comprehensive — add what you're learning from the shadows"},
+   ],
+   kpis:[
+     {label:"10–12 cold calls shadowed",star:true,desc:"Quantity matters — you're pattern-matching across different reps"},
+     {label:"Deck updated with new context and depth",star:true,desc:"Your deck should now reflect real-world insights, not just templates"},
+     {label:"Top 5 objections from cold calls documented",star:false,desc:"You'll need these in your showcase tomorrow"},
+   ],
+   resources:["cold_call_script","call_templates","product_deck"],badgeId:null,
+   tip:"By the end of today, cold calling should feel familiar — not scary. The fear goes away with enough exposure."},
+
+  {id:5,label:"Day 7",title:"Showcase + Strategy + LinkedIn",subtitle:"Demo to leadership · Build your script · Post on LinkedIn",type:"practice",emoji:"🎤",
+   tasks:[
+     {id:"d5_1",text:"Showcase your demo to the leadership team and take inputs"},
+     {id:"d5_2",text:"Create your own script based on learnings from the past week"},
+     {id:"d5_3",text:"Create your own strategy doc — how you will reach your monthly target"},
+     {id:"d5_4",text:"Create a LinkedIn post using your creativity — share what you've learnt so far"},
+   ],
+   kpis:[
+     {label:"Demo showcased to leadership — inputs taken",star:true,desc:"Notes from leadership feedback captured and added to your script"},
+     {label:"Personal script and strategy doc created",star:true,desc:"This is YOUR playbook — specific to how you operate"},
+     {label:"LinkedIn post published",star:true,desc:"Creative, authentic, and relevant — shows you're thinking, not just executing"},
+   ],
+   resources:["call_templates","cold_call_script","demo_rubric","linkedin"],badgeId:"showcase_star",
+   tip:"Your LinkedIn post doesn't need to be perfect. Share your genuine perspective — that's what gets engagement."},
+
+  {id:6,label:"Day 8–11",title:"100 Leads — Make Them Count",subtitle:"Work the raw data · Use AI for KDM research · Book 12–15 discovery calls",type:"data",emoji:"🤖",
+   tasks:[
+     {id:"d6_1",text:"Receive and review the 100 raw leads provided by the team"},
+     {id:"d6_2",text:"For every lead with missing or unqualified data, use AI agents to find the correct KDMs before calling"},
+     {id:"d6_3",text:"Start outreach across all channels — WhatsApp, Call, LinkedIn, Email"},
+     {id:"d6_4",text:"Follow the ICP document strictly — only qualify leads that match the criteria"},
+     {id:"d6_5",text:"Book 12–15 discovery calls from the 100 leads by Day 11"},
+     {id:"d6_6",text:"Track daily: out of 100, how many leads made use of, and how many converted to demo bookings"},
+   ],
+   kpis:[
+     {label:"12–15 discovery calls booked from 100 leads",star:true,desc:"This is the primary performance metric for this phase"},
+     {label:"All outreach follows ICP document strictly",star:true,desc:"No demo calls booked with unqualified leads — quality over quantity"},
+     {label:"AI used to fix missing KDM data before calling",star:true,desc:"Don't call blind — research first, then reach out"},
+     {label:"Daily conversion log updated in Unisheet",star:false,desc:"Track: leads contacted / leads responded / demos booked"},
+   ],
+   resources:["raw_data","icp","email_templates","wa_templates","linkedin","crm","ai_tools"],badgeId:"data_hunter",
+   tip:"You have 100 leads. Your job isn't to call all 100 — it's to maximise how many you can convert. Smart outreach beats volume."},
+
+  {id:7,label:"Day 12",title:"Reflection & Strategy Reset",subtitle:"Daily check-in as usual · Reflect · Build your own strategy to hit target",type:"feedback",emoji:"💬",
+   tasks:[
+     {id:"d7_1",text:"Join morning check-in call with manager as usual"},
+     {id:"d7_2",text:"Write a structured self-review: wins, challenges, and what you'd do differently"},
+     {id:"d7_3",text:"Document 3 specific action items you will act on immediately"},
+     {id:"d7_4",text:"Make your own strategy based on your target — what will specifically help you reach it"},
+   ],
+   kpis:[
+     {label:"Self-review is honest and specific",star:false,desc:"Not ad-hoc — structured: wins / challenges / would-do-differently"},
+     {label:"Action items are written with timelines",star:true,desc:"Not verbal — specific, dated, and shared with manager"},
+     {label:"Personal strategy to reach target documented",star:true,desc:"Not a generic plan — specific to your numbers and your way"},
+   ],
+   resources:["crm","demo_tracker","targets"],badgeId:null,
+   tip:"You've been joining daily check-ins — your manager already knows the picture. Use today to zoom out and think strategically about hitting your goal."},
+
+  {id:8,label:"Day 13",title:"Final Onboarding Session",subtitle:"Share your experience · Learn new AI tools · Get certified",type:"feedback",emoji:"🎓",
+   tasks:[
+     {id:"d8_1",text:"Prepare your 5-min share: 3 biggest learnings, 1 surprise, 1 thing you're excited about, AND 3 things you struggle with or that take the most time"},
+     {id:"d8_2",text:"Attend the final onboarding session with the full team"},
+     {id:"d8_3",text:"Share your onboarding experience authentically"},
+     {id:"d8_4",text:"Learn new AI tools for efficiency — tools that can speed up your daily workflow"},
+     {id:"d8_5",text:"Complete the onboarding feedback survey (helps improve the program)"},
+     {id:"d8_6",text:"Confirm Month 1 targets and first-week execution plan with manager"},
+     {id:"d8_7",text:"Collect your DaanVeda Certified badge 🏆"},
+   ],
+   kpis:[
+     {label:"Share includes struggles + time-drains",star:true,desc:"The struggles section is the most valuable part — be specific"},
+     {label:"At least 1 new AI tool explored for your workflow",star:true,desc:"Identify one tool that will save you real time each day"},
+     {label:"Feedback survey submitted",star:false,desc:"5 minutes — helps the next person joining"},
+     {label:"Month 1 execution plan confirmed",star:true,desc:"You start Day 15 knowing exactly what you're doing"},
+   ],
+   resources:["targets","ai_tools"],badgeId:"certified_rep",
+   tip:"This is your last chance to ask anything before going live. Ask everything. Nothing is too small or too obvious."},
+
+  {id:9,label:"Day 14",title:"Rest Day",subtitle:"You've earned it. Seriously. Do nothing work-related.",type:"rest",emoji:"😌",
+   tasks:[],
+   kpis:[{label:"Show up tomorrow fully charged",star:false,desc:"That's the only KPI. Rest is the strategy."}],
+   resources:[],badgeId:null,
+   restDay:true,
+   tip:""},
+
+  {id:10,label:"Day 15",title:"EXECUTIONNNNNN 🔥",subtitle:"This is what everything was for. The pipeline is yours. Go.",type:"execution",emoji:"⚡",
+   tasks:[
+     {id:"d10_1",text:"Review your pipeline and targets before your first call — 10 mins, max"},
+     {id:"d10_2",text:"Make your first outreach touches — calls, emails, LinkedIn, WhatsApp"},
+     {id:"d10_3",text:"Join team standup and bring energy"},
+     {id:"d10_4",text:"Log every single activity in real-time — not at end of day"},
+     {id:"d10_5",text:"Send EOD update to manager: what you did, what's in pipeline, tomorrow's plan"},
+   ],
+   kpis:[
+     {label:"Outreach starts on Day 15 — no delay",star:true,desc:"Momentum starts today. Not next Monday. Today."},
+     {label:"Every activity logged in real-time",star:true,desc:"Every call, every reply, every booking — logged same moment"},
+     {label:"EOD update sent to manager",star:false,desc:"Brief: done / pipeline / tomorrow"},
+   ],
+   resources:["crm","email_templates","wa_templates","call_templates","demo_tracker","targets"],badgeId:"first_execution",
+   tip:"You're ready. You've done the work. Now go be great."},
+];
+
+const RESOURCES=[
+  {id:"email",cat:"Setup",icon:"📧",name:"Company Email ID",desc:"Your @daanveda.com email for all outreach and internal comms",action:"Request from Manager"},
+  {id:"crm",cat:"Setup",icon:"🗄️",name:"CRM Access",desc:"Salesforce or HubSpot login — your pipeline command centre",action:"IT will set up"},
+  {id:"linkedin",cat:"Setup",icon:"💼",name:"LinkedIn Profile",desc:"Updated with DaanVeda role, connected to team, following company page",action:"Update yourself"},
+  {id:"schedule",cat:"Setup",icon:"📅",name:"15-Day Schedule",desc:"This tracker — review with your manager on Day 0",action:"You're here ✓"},
+  {id:"sales_bible",cat:"Learning",icon:"📖",name:"DaanVeda Sales Bible",desc:"The definitive guide to our sales process, frameworks, and scripts",action:"Access in Drive"},
+  {id:"fundraising_course",cat:"Learning",icon:"🎓",name:"Fundraising Course",desc:"Full course — fundraising strategy, donor psychology, and process",action:"Access in Drive"},
+  {id:"vertical_strategy",cat:"Learning",icon:"🎯",name:"Vertical Strategy Doc",desc:"Strategy guide for your assigned market segment / vertical",action:"Access in Drive"},
+  {id:"case_studies",cat:"Learning",icon:"📑",name:"Case Studies (Top 5)",desc:"Real deal case studies — what was pitched, why they bought, the outcome",action:"Access in Drive"},
+  {id:"icp",cat:"Learning",icon:"👤",name:"Customer ICP Document",desc:"Ideal Customer Profile — who we sell to, triggers, pain points, budget",action:"Access in Drive"},
+  {id:"competitor_cards",cat:"Learning",icon:"⚔️",name:"Competitor Battle Cards",desc:"Side-by-side vs top 3 competitors, including objection responses",action:"Access in Drive"},
+  {id:"product_deck",cat:"Product",icon:"🖥️",name:"DaanVeda Product Deck",desc:"Full product presentation — all modules, benefits, pricing, use cases",action:"Access in Drive"},
+  {id:"company_profile",cat:"Product",icon:"🏢",name:"Company Profile",desc:"Company overview, mission, clients, awards — for trust-building",action:"Access in Drive"},
+  {id:"demo_video_irfan",cat:"Product",icon:"🎬",name:"Irfan's Demo Recording",desc:"Full live demo recording — the gold standard. Watch twice.",action:"Access in Drive"},
+  {id:"testimonials",cat:"Product",icon:"⭐",name:"Customer Testimonials",desc:"Video and written testimonials from existing clients",action:"Access in Drive"},
+  {id:"call_templates",cat:"Outreach",icon:"📞",name:"Call Scripts & Templates",desc:"Opener, discovery, objection handling, and closing scripts",action:"Access in Drive"},
+  {id:"cold_call_script",cat:"Outreach",icon:"❄️",name:"Cold Call Script",desc:"Proven opener → pitch → ask sequence for cold calls",action:"Access in Drive"},
+  {id:"email_templates",cat:"Outreach",icon:"✉️",name:"Email Templates",desc:"Outreach, follow-up, no-reply, and nurture email sequences",action:"Access in Drive"},
+  {id:"wa_templates",cat:"Outreach",icon:"💬",name:"WhatsApp Templates",desc:"Approved WA message templates for different touchpoints",action:"Access in Drive"},
+  {id:"raw_data",cat:"Data & AI",icon:"📊",name:"Fresh Monthly Raw Data",desc:"Current month's prospect data set — clean, qualify, and work it",action:"Request from Manager"},
+  {id:"ai_tools",cat:"Data & AI",icon:"🤖",name:"AI Lead Gen Tools Guide",desc:"How to use Apollo, Clay, or similar tools for enrichment + outreach",action:"Access in Drive"},
+  {id:"targets",cat:"Performance",icon:"🎯",name:"Monthly Targets Sheet",desc:"Your personal targets: deals, calls, demos, pipeline value by month",action:"Confirm with Manager"},
+  {id:"demo_tracker",cat:"Performance",icon:"📋",name:"Demo Tracker (Shared)",desc:"Team-wide demo log — updates pipeline visibility for everyone",action:"Access in Drive"},
+  {id:"shadow_debrief_form",cat:"Performance",icon:"📝",name:"Shadow Call Debrief Form",desc:"Template to complete after every shadow call — sent to manager",action:"Access in Drive"},
+  {id:"demo_rubric",cat:"Performance",icon:"📏",name:"Demo / Call Evaluation Rubric",desc:"Scoring criteria used by manager in your Day 6 showcase",action:"Access in Drive"},
+];
+
+const BADGES=[
+  {id:"setup_hero",emoji:"⚡",name:"Setup Hero",color:"#E6F1FB",textColor:"#0C447C",borderColor:"#85B7EB",desc:"All Day 0 setup tasks done"},
+  {id:"fundraising_scholar",emoji:"📚",name:"Fundraising Scholar",color:"#F3EFFE",textColor:"#3C3489",borderColor:"#AFA9EC",desc:"Day 1–2 complete + MCQ ≥ 80%"},
+  {id:"product_pro",emoji:"🧠",name:"Product Pro",color:"#EDFAF5",textColor:"#085041",borderColor:"#5DCAA5",desc:"Knows DaanVeda inside out"},
+  {id:"shadow_champion",emoji:"👂",name:"Shadow Champion",color:"#FFF4EC",textColor:"#633806",borderColor:"#EF9F27",desc:"All 10 shadow calls done"},
+  {id:"showcase_star",emoji:"🌟",name:"Showcase Star",color:"#FFF0F3",textColor:"#79173A",borderColor:"#ED93B1",desc:"Showcase score ≥ 75/100"},
+  {id:"strategist",emoji:"🗺️",name:"Strategist",color:"#EAF8FD",textColor:"#042C53",borderColor:"#85B7EB",desc:"Personal strategy submitted"},
+  {id:"data_hunter",emoji:"🤖",name:"Data Hunter",color:"#EDFAF5",textColor:"#173404",borderColor:"#97C459",desc:"50+ qualified leads built"},
+  {id:"certified_rep",emoji:"🏆",name:"DaanVeda Certified",color:"#FAEEDA",textColor:"#412402",borderColor:"#EF9F27",desc:"Full onboarding complete"},
+  {id:"first_execution",emoji:"⚡",name:"First Strike",color:"#EAF3DE",textColor:"#27500A",borderColor:"#97C459",desc:"Day 15 execution complete"},
+  {id:"speed_learner",emoji:"🚀",name:"Speed Learner",color:"#F3EFFE",textColor:"#26215C",borderColor:"#7F77DD",desc:"Manager-awarded: exceptional pace",managerAwarded:true},
+];
+
+const MCQ=[
+  {id:"q1",q:"What does ICP stand for in sales?",opts:["Internal Customer Profile","Ideal Customer Profile","Initial Contact Protocol","Inbound Conversion Point"],correct:1},
+  {id:"q2",q:"In the prospect journey, which stage comes FIRST?",opts:["Decision","Consideration","Awareness","Retention"],correct:2},
+  {id:"q3",q:"What is the primary goal of a discovery call?",opts:["Close the deal immediately","Understand the prospect's pain points and goals","Present all product features","Negotiate pricing"],correct:1},
+  {id:"q4",q:"When a prospect says 'It's too expensive', the best first response is:",opts:["Offer a discount immediately","End the call politely","Acknowledge, then ask what they're comparing it against","Send pricing via email and follow up in a week"],correct:2},
+  {id:"q5",q:"What does 'pipeline coverage' mean?",opts:["Number of demos given","Total potential deal value vs monthly quota (ideally 3×)","Number of cold calls made","CRM completion percentage"],correct:1},
+  {id:"q6",q:"A high-performing fundraising pitch should:",opts:["List every product feature","Use donor language and speak to outcomes and impact","Focus on competitor weaknesses","Skip discovery to save time"],correct:1},
+  {id:"q7",q:"What is the recommended pipeline coverage ratio vs monthly quota?",opts:["1× equal to quota","1.5× quota","3× quota","5× quota"],correct:2},
+  {id:"q8",q:"When shadowing a call, you should:",opts:["Ask questions to show engagement","Stay muted, take notes, debrief immediately after","Give the closer hints via chat","Only shadow demos — not onboarding calls"],correct:1},
+  {id:"q9",q:"Multi-channel outreach means:",opts:["Sending the same email multiple times from different accounts","Reaching prospects across email + phone + LinkedIn + WhatsApp","Using multiple CRM platforms simultaneously","Calling from different numbers"],correct:1},
+  {id:"q10",q:"What should you do immediately after a shadow call?",opts:["Take a break before notes go cold","Fill the shadow call debrief form and send to manager","Call the prospect directly while context is fresh","Wait for the closer to brief you the next day"],correct:1},
+];
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+
+const STORAGE_KEY='dv_onboarding_v3';
+let state={
+  repName:'',role:'SDR',activeDay:0,currentTab:'timeline',
+  completedTasks:{},mcqAnswers:{},mcqSubmitted:false,resourcesChecked:{},
+  selectedRole:'SDR'
+};
+
+// ─── STORAGE: localStorage (fallback) ────────────────────────────────────────
+
+function save(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}
+  saveToSupabase(); // also persist to Supabase (fire-and-forget)
+}
+
+function load(){
+  try{const d=localStorage.getItem(STORAGE_KEY);if(d)Object.assign(state,JSON.parse(d));}catch(e){}
+}
+
+// ─── STORAGE: Supabase ────────────────────────────────────────────────────────
+
+async function saveToSupabase(){
+  try{
+    const { data:{ user } } = await supabaseClient.auth.getUser();
+    if(!user) return;
+    await supabaseClient.from('user_progress').upsert({
+      user_id: user.id,
+      name: state.repName,
+      role: state.role,
+      completed_tasks: state.completedTasks,
+      overall_progress: overallPct(),
+      mcq_score: mcqPct()
+    });
+  }catch(e){ console.warn('Supabase save error:',e); }
+}
+
+async function loadFromSupabase(){
+  try{
+    const { data:{ user } } = await supabaseClient.auth.getUser();
+    if(!user) return;
+    const { data } = await supabaseClient
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if(data){
+      if(data.name) state.repName = data.name;
+      if(data.role) state.role = data.role;
+      if(data.completed_tasks) state.completedTasks = data.completed_tasks;
+    }
+  }catch(e){ console.warn('Supabase load error:',e); }
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+
+async function handleAuth(){
+  const email = document.getElementById('auth-email').value.trim();
+  if(!email){ showAuthError('Please enter your email address.'); return; }
+
+  const btn    = document.getElementById('auth-btn');
+  const status = document.getElementById('auth-status');
+  const errEl  = document.getElementById('auth-error');
+
+  btn.disabled = true;
+  btn.textContent = 'Please wait…';
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  status.textContent = 'Signing in…';
+
+  // Attempt sign-in first
+  let { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password: '123456'
+  });
+
+  // If credentials invalid → new user → sign up
+  if(error && (error.message.toLowerCase().includes('invalid login') || error.message.toLowerCase().includes('invalid credentials'))){
+    status.textContent = 'Creating your account…';
+    const { data: signUpData, error: signUpErr } = await supabaseClient.auth.signUp({
+      email,
+      password: '123456'
+    });
+    if(signUpErr){
+      showAuthError(signUpErr.message);
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      status.textContent = '';
+      return;
+    }
+    data = signUpData;
+  } else if(error){
+    showAuthError(error.message);
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    status.textContent = '';
+    return;
+  }
+
+  // Auth succeeded — load data and launch app
+  status.textContent = 'Loading your progress…';
+  load();               // localStorage first
+  await loadFromSupabase(); // Supabase overwrites (source of truth)
+  document.getElementById('auth-overlay').style.display = 'none';
+  initApp();
+}
+
+function showAuthError(msg){
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── APP INIT ─────────────────────────────────────────────────────────────────
+
+function initApp(){
+  _pendingRole = state.role;
+  if(!state.repName){
+    document.getElementById('modal-overlay').style.display = 'flex';
+  } else {
+    document.getElementById('modal-overlay').style.display = 'none';
+  }
+  render();
+  switchTab(state.currentTab || 'timeline');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function dayTasks(day){return day.tasks.filter(t=>!t.coldCallerOnly||state.role==='Cold Caller');}
+function dayDone(day){const t=dayTasks(day);return t.length?t.filter(t=>state.completedTasks[t.id]).length:0;}
+function dayPct(day){const t=dayTasks(day);return t.length?Math.round(dayDone(day)/t.length*100):0;}
+
+function earnedBadges(){
+  const e=new Set();
+  if(dayPct(DAYS[0])===100)e.add('setup_hero');
+  if(dayPct(DAYS[1])===100&&state.mcqSubmitted&&mcqPct()>=80)e.add('fundraising_scholar');
+  if(dayPct(DAYS[2])===100)e.add('product_pro');
+  if(dayPct(DAYS[3])===100)e.add('shadow_champion');
+  if(dayPct(DAYS[4])===100)e.add('showcase_star');
+  if(dayPct(DAYS[5])===100)e.add('strategist');
+  if(dayPct(DAYS[6])===100)e.add('data_hunter');
+  if(dayPct(DAYS[8])===100)e.add('certified_rep');
+  if(dayPct(DAYS[10])===100)e.add('first_execution');
+  return e;
+}
+
+function mcqScore(){return MCQ.filter(q=>state.mcqAnswers[q.id]===q.correct).length;}
+function mcqPct(){return Math.round(mcqScore()/MCQ.length*100);}
+
+function overallPct(){
+  const all=DAYS.flatMap(d=>dayTasks(d));
+  return all.length?Math.round(all.filter(t=>state.completedTasks[t.id]).length/all.length*100):0;
+}
+
+function resById(id){return RESOURCES.find(r=>r.id===id);}
+function badgeById(id){return BADGES.find(b=>b.id===id);}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function render(){
+  renderHeader();
+  renderSidebar();
+  renderTimeline();
+  renderResources();
+  renderBadges();
+  renderMcq();
+}
+
+function renderHeader(){
+  document.getElementById('user-name-lbl').textContent=state.repName||'Set your name';
+  document.getElementById('user-role-lbl').textContent=state.role;
+  const pct=overallPct();
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  const eb=earnedBadges();
+  const nonMgr=BADGES.filter(b=>!b.managerAwarded).length;
+  document.getElementById('badge-count').textContent='🏅 '+eb.size+'/'+nonMgr;
+  // mcq tab pill
+  const mcqTab=document.getElementById('tab-mcq');
+  const oldPill=mcqTab.querySelector('.mcq-score-pill');
+  if(oldPill)oldPill.remove();
+  if(state.mcqSubmitted){
+    const p=mcqPct();
+    const pill=document.createElement('span');
+    pill.className='mcq-score-pill';
+    pill.style.background=p>=80?'#DCFCE7':'#FEE2E2';
+    pill.style.color=p>=80?'#166534':'#991B1B';
+    pill.textContent=p+'%';
+    mcqTab.appendChild(pill);
+  }
+}
+
+function renderSidebar(){
+  const eb=earnedBadges();
+  const el=document.getElementById('sidebar-days');
+  el.innerHTML='';
+  DAYS.forEach((day,idx)=>{
+    const pct=dayPct(day);
+    const tm=TYPE_META[day.type];
+    const active=state.activeDay===idx;
+    const div=document.createElement('div');
+    div.className='day-item'+(active?' active':'');
+    div.onclick=()=>{state.activeDay=idx;save();render();};
+
+    let iconStyle=`background:${pct===100?'#DCFCE7':tm.bg};border-color:${pct===100?'#86EFAC':tm.border}`;
+    div.innerHTML=`
+      <div class="day-icon" style="${iconStyle}">${pct===100?'✓':day.emoji}</div>
+      <div class="day-meta">
+        <div class="d-label" style="color:${active?'#1D4ED8':'#475569'}">${day.label}</div>
+        <div class="d-title">${day.title}</div>
+        ${pct>0&&pct<100?`<div class="day-mini-bar" style="display:block"><div class="day-mini-fill" style="width:${pct}%"></div></div>`:''}
+      </div>
+      ${day.badgeId&&eb.has(day.badgeId)?'<span class="badge-dot">🏅</span>':''}
+    `;
+    el.appendChild(div);
+  });
+}
+
+function renderTimeline(){
+  const day=DAYS[state.activeDay];
+  const tm=TYPE_META[day.type];
+  const eb=earnedBadges();
+  const pct=dayPct(day);
+  const done=dayDone(day);
+  const tasks=dayTasks(day);
+  const el=document.getElementById('tab-timeline-content');
+
+  // day header
+  let tipHtml=day.tip?`<div class="dh-tip" style="border-left-color:${tm.dot}"><strong>Tip:</strong> ${day.tip}</div>`:'';
+  let headerHtml=`
+    <div id="day-header" style="background:${tm.bg};border-color:${tm.border}">
+      <div class="dh-top">
+        <div>
+          <div class="dh-label" style="color:${tm.text}">${day.label}</div>
+          <div class="dh-title">${day.emoji} ${day.title}</div>
+          <div class="dh-subtitle">${day.subtitle}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="dh-pct" style="color:${tm.text}">${pct}%</div>
+          <div class="dh-pct-lbl">complete</div>
+        </div>
+      </div>
+      <div class="dh-bar"><div class="dh-bar-fill" style="width:${pct}%;background:${tm.dot}"></div></div>
+      ${tipHtml}
+    </div>`;
+
+  // tasks
+  let tasksHtml=`<div class="card"><div class="tasks-header">Tasks <span class="tasks-count">${done}/${tasks.length}</span></div>`;
+  tasks.forEach(t=>{
+    const isDone=!!state.completedTasks[t.id];
+    const ccPill=t.coldCallerOnly?'<span class="cc-pill">CC</span>':'';
+    tasksHtml+=`<div class="task-row${isDone?' done':''}" onclick="toggleTask('${t.id}')">
+      <div class="task-circle">${isDone?'✓':''}</div>
+      <span class="task-text">${t.text}${ccPill}</span>
+    </div>`;
+  });
+  tasksHtml+='</div>';
+
+  // kpis
+  let kpiHtml='<div class="card-sm"><div style="font-weight:700;margin-bottom:10px;font-size:12px">KPIs — What Great Looks Like</div>';
+  day.kpis.forEach(k=>{
+    kpiHtml+=`<div class="kpi-row${k.star?' star-kpi':''}">
+      <div class="kpi-top">${k.star?'<span class="star-icon">⭐</span>':''}<span class="kpi-label">${k.label}</span></div>
+      <div class="kpi-desc">${k.desc}</div>
+    </div>`;
+  });
+  kpiHtml+='</div>';
+
+  // resources
+  let resHtml='';
+  if(day.resources.length){
+    resHtml='<div class="card-sm"><div style="font-weight:700;margin-bottom:8px;font-size:12px">Resources Needed Today</div>';
+    day.resources.forEach(rid=>{
+      const r=resById(rid);if(!r)return;
+      resHtml+=`<div class="res-mini"><span class="res-mini-icon">${r.icon}</span><span class="res-mini-name">${r.name}</span><span class="res-mini-action">${r.action}</span></div>`;
+    });
+    resHtml+='</div>';
+  }
+
+  // badge
+  let badgeHtml='';
+  if(day.badgeId){
+    const b=badgeById(day.badgeId);
+    const earned=eb.has(day.badgeId);
+    badgeHtml=`<div class="badge-card${earned?' earned':''}" style="${earned?`background:${b.color};border-color:${b.borderColor};border-style:solid`:''}">
+      <div class="badge-avatar" style="${earned?`background:${b.color};border-color:${b.borderColor}`:''}">${earned?b.emoji:'🔒'}</div>
+      <div class="badge-info">
+        <div class="badge-status" style="color:${earned?b.textColor:'#94A3B8'}">${earned?'Badge Earned!':'Badge Available'}</div>
+        <div class="badge-name" style="${earned?`color:${b.textColor}`:''}">${b.name}</div>
+        <div class="badge-desc">${b.desc}</div>
+      </div>
+    </div>`;
+  }
+
+  // Rest day — show cartoon instead of task list
+  if(day.restDay){
+    el.innerHTML=`<div style="max-width:680px">
+      ${headerHtml}
+      <div style="background:white;border-radius:16px;border:1px solid #e2e8f0;padding:32px;text-align:center">
+        <svg viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:380px;margin:0 auto 24px;display:block">
+          <!-- Sky background -->
+          <rect width="400" height="280" fill="#F0F9FF" rx="12"/>
+          <!-- Stars / z's floating -->
+          <text x="280" y="60" font-size="22" fill="#A5B4FC" opacity="0.8" font-family="serif">Z</text>
+          <text x="310" y="38" font-size="16" fill="#C4B5FD" opacity="0.6" font-family="serif">z</text>
+          <text x="335" y="55" font-size="12" fill="#DDD6FE" opacity="0.5" font-family="serif">z</text>
+          <!-- Moon -->
+          <circle cx="340" cy="50" r="30" fill="#FEF08A"/>
+          <circle cx="352" cy="42" r="24" fill="#F0F9FF"/>
+          <!-- Cloud 1 -->
+          <ellipse cx="80" cy="55" rx="40" ry="22" fill="white"/>
+          <ellipse cx="55" cy="60" rx="25" ry="18" fill="white"/>
+          <ellipse cx="108" cy="62" rx="28" ry="16" fill="white"/>
+          <!-- Cloud 2 small -->
+          <ellipse cx="200" cy="35" rx="28" ry="14" fill="white" opacity="0.7"/>
+          <ellipse cx="180" cy="40" rx="18" ry="11" fill="white" opacity="0.7"/>
+          <!-- Bed base -->
+          <rect x="60" y="170" width="280" height="20" rx="4" fill="#6366F1"/>
+          <!-- Mattress -->
+          <rect x="65" y="145" width="270" height="35" rx="8" fill="#E0E7FF"/>
+          <!-- Pillow -->
+          <rect x="70" y="140" width="70" height="25" rx="10" fill="white" stroke="#C7D2FE" stroke-width="1.5"/>
+          <!-- Blanket -->
+          <rect x="65" y="155" width="270" height="30" rx="6" fill="#818CF8"/>
+          <rect x="65" y="155" width="270" height="12" rx="6" fill="#6366F1"/>
+          <!-- Bedposts -->
+          <rect x="62" y="140" width="14" height="55" rx="4" fill="#4338CA"/>
+          <rect x="324" y="140" width="14" height="55" rx="4" fill="#4338CA"/>
+          <!-- Head -->
+          <circle cx="120" cy="133" r="22" fill="#FBBF24"/>
+          <!-- Sleeping face -->
+          <path d="M110 135 Q120 140 130 135" stroke="#92400E" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M112 128 Q115 126 118 128" stroke="#92400E" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M122 128 Q125 126 128 128" stroke="#92400E" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Hair little tufts -->
+          <path d="M110 116 Q108 108 115 112" stroke="#92400E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M120 113 Q120 105 125 110" stroke="#92400E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Lamp -->
+          <rect x="320" y="155" width="8" height="40" fill="#D1D5DB"/>
+          <polygon points="308,155 340,155 330,130 318,130" fill="#FDE68A" stroke="#F59E0B" stroke-width="1"/>
+          <ellipse cx="324" cy="155" rx="16" ry="4" fill="#FDE68A" opacity="0.5"/>
+          <!-- Floor -->
+          <rect x="40" y="190" width="320" height="6" rx="3" fill="#DDD6FE"/>
+          <!-- Caption -->
+          <text x="200" y="240" text-anchor="middle" font-size="15" font-family="'Segoe UI',sans-serif" font-weight="600" fill="#4338CA">You've earned this. 100%.</text>
+          <text x="200" y="262" text-anchor="middle" font-size="12" font-family="'Segoe UI',sans-serif" fill="#6B7280">Day 15 is going to need your best energy.</text>
+        </svg>
+        <div style="font-size:22px;font-weight:700;color:#4338CA;margin-bottom:8px">Complete Rest. No Tasks. No Tracker.</div>
+        <div style="font-size:14px;color:#6B7280;line-height:1.7;max-width:420px;margin:0 auto">
+          You've spent 13 days learning, shadowing, building, and executing.<br>
+          Today the only instruction is: <strong style="color:#4338CA">switch off</strong>.<br><br>
+          Sleep well. Eat well. Do something you enjoy.<br>
+          Tomorrow, you go live. 🚀
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // mcq prompt
+  let mcqBanner='';
+  if(day.mcqPrompt){
+    const p=mcqPct();
+    let resultLine='';
+    if(state.mcqSubmitted)resultLine=`<div class="r" style="color:${p>=80?'#15803D':'#DC2626'}">Your score: ${p}% (${mcqScore()}/${MCQ.length}) — ${p>=80?'Passed ✓':'Not passed yet'}</div>`;
+    mcqBanner=`<div class="mcq-banner">
+      <div class="mcq-banner-left">
+        <div class="t">Knowledge Test Required</div>
+        <div class="s">Pass the MCQ with ≥80% to unlock the Fundraising Scholar badge.</div>
+        ${resultLine}
+      </div>
+      <button class="btn-primary" onclick="switchTab('mcq')">${state.mcqSubmitted?'Review Test':'Take Test →'}</button>
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div style="max-width:760px">
+      ${headerHtml}
+      <div class="two-col">
+        ${tasksHtml}
+        <div>${kpiHtml}${resHtml}${badgeHtml}</div>
+      </div>
+      ${mcqBanner}
+    </div>`;
+}
+
+function renderResources(){
+  const cats=[...new Set(RESOURCES.map(r=>r.cat))];
+  let html='<div style="max-width:800px"><div class="res-tab-title">Resource Collaterals</div><div class="res-tab-sub">Everything you need across the 15-day journey. Click each to mark as accessed.</div>';
+  cats.forEach(cat=>{
+    const items=RESOURCES.filter(r=>r.cat===cat);
+    const checked=items.filter(r=>state.resourcesChecked[r.id]).length;
+    html+=`<div class="res-cat-header"><div class="res-cat-name">${cat}</div><span class="res-cat-count">${checked}/${items.length} accessed</span></div>`;
+    html+='<div class="res-grid">';
+    items.forEach(r=>{
+      const isChecked=!!state.resourcesChecked[r.id];
+      html+=`<div class="res-card${isChecked?' accessed':''}" onclick="toggleResource('${r.id}')">
+        <div class="res-check">${isChecked?'✓':''}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+            <span class="res-card-icon">${r.icon}</span>
+            <span class="res-card-name">${r.name}</span>
+          </div>
+          <div class="res-card-desc">${r.desc}</div>
+          <div class="res-card-action">${r.action}</div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('tab-resources-content').innerHTML=html;
+}
+
+function renderBadges(){
+  const eb=earnedBadges();
+  const nonMgr=BADGES.filter(b=>!b.managerAwarded).length;
+  let html=`<div style="max-width:680px"><div class="badges-title">Your Badges</div><div class="badges-sub">${eb.size} of ${nonMgr} earned (+ 1 manager-awarded). Complete each phase to unlock.</div><div class="badges-grid">`;
+  BADGES.forEach(b=>{
+    const earned=eb.has(b.id);
+    html+=`<div class="badge-tile${earned?' earned':''}" style="${earned?`background:${b.color};border-color:${b.borderColor};border-width:1px;border-style:solid`:''}">
+      <div class="badge-tile-avatar" style="${earned?`background:${b.color};border-color:${b.borderColor}`:''}">${earned?b.emoji:'🔒'}</div>
+      <div class="badge-tile-name" style="${earned?`color:${b.textColor}`:''}">${b.name}</div>
+      <div class="badge-tile-desc">${b.managerAwarded?'Manager-awarded badge':b.desc}</div>
+      ${earned?'<div class="earned-pill">Earned ✓</div>':''}
+      ${b.managerAwarded&&!earned?'<div class="manager-note">Ask your manager</div>':''}
+    </div>`;
+  });
+  html+='</div></div>';
+  document.getElementById('tab-badges-content').innerHTML=html;
+}
+
+function renderMcq(){
+  const p=mcqPct();
+  const sc=mcqScore();
+  let resultHtml='';
+  if(state.mcqSubmitted){
+    resultHtml=`<div class="mcq-result" style="background:${p>=80?'#F0FDF4':'#FEF2F2'};border:1px solid ${p>=80?'#86EFAC':'#FECACA'}">
+      <div class="mcq-result-score" style="color:${p>=80?'#16A34A':'#DC2626'}">${p}%</div>
+      <div>
+        <div class="mcq-result-msg" style="color:${p>=80?'#15803D':'#991B1B'}">${p>=80?'Passed! Fundraising Scholar badge unlocked.':'Not quite — you need 80% to pass.'}</div>
+        <div class="mcq-result-detail">${sc} of ${MCQ.length} correct</div>
+        ${p<80?'<button class="retry-btn" onclick="retryMcq()">Retry test →</button>':''}
+      </div>
+    </div>`;
+  }
+
+  let qHtml='';
+  MCQ.forEach((q,qi)=>{
+    const sel=state.mcqAnswers[q.id];
+    qHtml+=`<div class="q-card">
+      <div style="display:flex;gap:9px;margin-bottom:2px">
+        <div class="q-num">${qi+1}</div>
+        <div class="q-text">${q.q}</div>
+      </div>
+      <div class="q-opts">`;
+    q.opts.forEach((opt,oi)=>{
+      let cls='opt-row';
+      let cirContent='';
+      if(state.mcqSubmitted){
+        if(oi===q.correct){cls+=' correct';cirContent='✓';}
+        else if(sel===oi){cls+=' wrong';cirContent='✗';}
+      } else if(sel===oi){cls+=' selected';cirContent='●';}
+      const onclick=state.mcqSubmitted?'':'onclick="selectOpt(\''+q.id+'\','+oi+')"';
+      qHtml+=`<div class="${cls}" ${onclick} style="${state.mcqSubmitted?'cursor:default':''}">
+        <div class="opt-circle">${cirContent}</div>
+        <span>${opt}</span>
+      </div>`;
+    });
+    qHtml+='</div></div>';
+  });
+
+  let submitHtml=!state.mcqSubmitted?'<button id="submit-mcq" onclick="submitMcq()">Submit Test →</button>':'';
+
+  document.getElementById('tab-mcq-content').innerHTML=`
+    <div style="max-width:640px">
+      <div class="mcq-title">Knowledge Test</div>
+      <div class="mcq-sub">10 questions on fundraising and sales. Score ≥80% to earn the Fundraising Scholar badge.</div>
+      ${resultHtml}
+      ${qHtml}
+      ${submitHtml}
+    </div>`;
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+
+function switchTab(tab){
+  state.currentTab=tab;
+  ['timeline','resources','badges','mcq'].forEach(t=>{
+    document.getElementById('tab-'+t+'-content').style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  save();
+  renderHeader();
+}
+
+function toggleTask(id){
+  state.completedTasks[id]=!state.completedTasks[id];
+  save();render();
+}
+
+function toggleResource(id){
+  state.resourcesChecked[id]=!state.resourcesChecked[id];
+  save();render();
+}
+
+function selectOpt(qid,oi){
+  if(state.mcqSubmitted)return;
+  state.mcqAnswers[qid]=oi;
+  save();renderMcq();
+}
+
+function submitMcq(){
+  if(Object.keys(state.mcqAnswers).length<MCQ.length){alert('Please answer all '+MCQ.length+' questions before submitting.');return;}
+  state.mcqSubmitted=true;
+  save();render();
+}
+
+function retryMcq(){
+  state.mcqSubmitted=false;
+  state.mcqAnswers={};
+  save();render();
+}
+
+// ─── SETUP MODAL ─────────────────────────────────────────────────────────────
+
+let _pendingRole='SDR';
+
+function selectRole(r,btn){
+  _pendingRole=r;
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function openSetup(){
+  _pendingRole=state.role;
+  document.getElementById('name-input').value=state.repName;
+  document.getElementById('save-setup').disabled=!state.repName.trim();
+  document.querySelectorAll('.role-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent.trim()===state.role);
+  });
+  document.getElementById('modal-overlay').style.display='flex';
+}
+
+function saveSetup(){
+  const name=document.getElementById('name-input').value.trim();
+  if(!name)return;
+  state.repName=name;
+  state.role=_pendingRole;
+  save();
+  document.getElementById('modal-overlay').style.display='none';
+  render();
+}
+
+document.getElementById('name-input').addEventListener('input',function(){
+  document.getElementById('save-setup').disabled=!this.value.trim();
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+// Check for an existing Supabase session. If one exists, skip the auth modal
+// and go straight into the app with the user's saved data.
+
+(async function boot(){
+  try{
+    const { data:{ session } } = await supabaseClient.auth.getSession();
+    if(session){
+      document.getElementById('auth-overlay').style.display = 'none';
+      load();                   // localStorage baseline
+      await loadFromSupabase(); // Supabase overwrites (source of truth)
+      initApp();
+    }
+    // No session → auth-overlay stays visible for the user to sign in
+  }catch(e){
+    console.warn('Session check error:',e);
+    // Fall through: auth modal remains visible
+  }
+})();
+</script>
+</body>
+</html>
